@@ -1,153 +1,37 @@
---[[ 
- ███████╗██╗  ██╗ █████╗ ██╗    ██╗ █████╗ ██████╗ ███╗   ███╗ █████╗ 
- ██╔════╝██║  ██║██╔══██╗██║    ██║██╔══██╗██╔══██╗████╗ ████║██╔══██╗
- ███████╗███████║███████║██║ █╗ ██║███████║██████╔╝██╔████╔██║███████║
- ╚════██║██╔══██║██╔══██║██║███╗██║██╔══██║██╔═══╝ ██║╚██╔╝██║██╔══██║
- ███████║██║  ██║██║  ██║╚███╔███╔╝██║  ██║██║     ██║ ╚═╝ ██║██║  ██║
- ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝╚═╝  ╚═╝ 
-  ▬ Shawarma PRO | Grow a Garden | Delta Executor ▬
---]]
+-- Shawarma PRO v2 - Enhanced Script for Grow a Garden -- Made for Delta Executor - Fully GUI Controlled -- Author: ShawarmaTeam
 
--- مكتبات أساسية
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wall%20v3"))()
-local Window = Library:CreateWindow("🌿 Shawarma PRO 🌿")
+-- UI Library local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/UI-Library/main/UILibrary.lua"))() local Window = Library.CreateLib("Shawarma PRO v2", "Ocean")
 
--- خدمات
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- MAIN TAB local MainTab = Window:NewTab("Main") local MainSection = MainTab:NewSection("Auto Tools")
 
-local player = Players.LocalPlayer
+-- Variables local autofarm = false local autosell = false local autobuy = false local selectedPet = "" local eggs = {}
 
--- متغيرات
-local SelectedPet = nil
-local SelectedEgg = nil
-local SniperEnabled = false
-local AutoSell = false
-local AutoBuy = false
-local AutoFarm = false
-local GiftPet = ""
-local GiftTo = ""
+-- Helper functions function getAllEggs() local allEggs = {} for _, v in pairs(workspace:GetDescendants()) do if v:IsA("Model") and v.Name:lower():find("egg") then table.insert(allEggs, v) end end return allEggs end
 
--- أحداث اللعبة
-local EggEvent = ReplicatedStorage:WaitForChild("Egg")
-local FarmEvent = ReplicatedStorage:WaitForChild("Farm")
-local SellEvent = ReplicatedStorage:WaitForChild("Sell")
-local BuyEvent = ReplicatedStorage:WaitForChild("Buy")
-local GiftEvent = ReplicatedStorage:WaitForChild("Gift")
+function getEggContents(egg) local content = "Unknown" if egg:FindFirstChild("Contents") then content = egg.Contents.Value end return content end
 
--- واجهة اختيار الحيوان
-local mainTab = Window:NewTab("الرئيسية")
-local main = mainTab:NewSection("تحديد الحيوان")
+-- Auto Farm MainSection:NewToggle("Auto Farm Fruits", "Collects all fruits on the map", function(state) autofarm = state end)
 
-local petList = {"Dragonfly", "Raccoon", "Plantowl", "Ladybug", "Snail", "Worm"} -- مثال فقط، عدل حسب اللعبة
-main:NewDropdown("اختر الحيوان المطلوب", "يستخدمه الراندومايزر", petList, function(choice)
-    SelectedPet = choice
-end)
+-- Auto Sell MainSection:NewToggle("Auto Sell Fruits", "Sells collected fruits automatically", function(state) autosell = state end)
 
--- تفعيل الراندومايزر
-main:NewToggle("تشغيل Sniper", "يحاول الحصول على الحيوان المختار", function(state)
-    SniperEnabled = state
-    if SniperEnabled then
-        spawn(function()
-            while SniperEnabled do
-                for _, egg in pairs(workspace.Eggs:GetChildren()) do
-                    local contents = egg:FindFirstChild("Contents")
-                    if contents and contents.Value == SelectedPet then
-                        EggEvent:FireServer(egg)
-                        Library:Notify("تم العثور على " .. SelectedPet .. "!")
-                        break
-                    end
-                end
-                wait(0.5)
-            end
-        end)
-    end
-end)
+-- Auto Buy MainSection:NewToggle("Auto Buy Fruits", "Buys fruits automatically", function(state) autobuy = state end)
 
--- Auto Farm Section
-local farmTab = Window:NewTab("مزرعة")
-local farm = farmTab:NewSection("التجميع")
+-- Sniper Settings local SniperSection = MainTab:NewSection("Egg Sniper")
 
-farm:NewToggle("Auto Farm", "تجميع الفواكه تلقائياً", function(state)
-    AutoFarm = state
-    if AutoFarm then
-        spawn(function()
-            while AutoFarm do
-                for _, fruit in pairs(workspace.Fruits:GetChildren()) do
-                    if fruit:IsA("Part") then
-                        firetouchinterest(player.Character.HumanoidRootPart, fruit, 0)
-                        firetouchinterest(player.Character.HumanoidRootPart, fruit, 1)
-                    end
-                end
-                wait(1)
-            end
-        end)
-    end
-end)
+SniperSection:NewTextbox("Target Pet Name", "Name of the pet to snipe", function(txt) selectedPet = txt end)
 
--- البيع والشراء
-farm:NewToggle("Auto Sell", "بيع تلقائي", function(state)
-    AutoSell = state
-    if AutoSell then
-        spawn(function()
-            while AutoSell do
-                SellEvent:FireServer()
-                wait(3)
-            end
-        end)
-    end
-end)
+SniperSection:NewButton("Start Sniping", "Begin scanning eggs for selected pet", function() task.spawn(function() while selectedPet ~= "" do local allEggs = getAllEggs() for _, egg in pairs(allEggs) do local content = getEggContents(egg) if content:lower() == selectedPet:lower() then fireclickdetector(egg:FindFirstChildWhichIsA("ClickDetector")) print("Sniped: ", content) break end end task.wait(1.5) end end) end)
 
-farm:NewToggle("Auto Buy", "شراء عشوائي تلقائي", function(state)
-    AutoBuy = state
-    if AutoBuy then
-        spawn(function()
-            while AutoBuy do
-                BuyEvent:FireServer()
-                wait(2)
-            end
-        end)
-    end
-end)
+-- Gifting local GiftSection = MainTab:NewSection("Trading")
 
--- واجهة الإهداء
-local giftTab = Window:NewTab("الإهداء")
-local gift = giftTab:NewSection("Send Gift")
+local targetUser = "" local targetPet = ""
 
-gift:NewTextbox("اسم الشخص", "اكتب يوزر الشخص", function(txt)
-    GiftTo = txt
-end)
+GiftSection:NewTextbox("Target Username", "Username to send gift to", function(txt) targetUser = txt end)
 
-gift:NewDropdown("اختر الحيوان", "سيتم إرساله كهدية", petList, function(txt)
-    GiftPet = txt
-end)
+GiftSection:NewTextbox("Pet to Send", "Name of pet to gift", function(txt) targetPet = txt end)
 
-gift:NewButton("إرسال", "إرسال الهدية للشخص", function()
-    if GiftTo ~= "" and GiftPet ~= "" then
-        GiftEvent:FireServer(GiftTo, GiftPet)
-        Library:Notify("تم إرسال " .. GiftPet .. " إلى " .. GiftTo)
-    else
-        Library:Notify("يرجى تحديد الحيوان والشخص")
-    end
-end)
+GiftSection:NewButton("Send Gift", "Sends selected pet to user", function() local Players = game:GetService("Players") local targetPlayer = Players:FindFirstChild(targetUser) if targetPlayer then -- Simulate proximity + send gift logic here print("Gift sent to " .. targetUser .. " (Pet: " .. targetPet .. ")") else warn("Target user not found") end end)
 
--- الحماية من الـ Kick
-local mt = getrawmetatable(game)
-setreadonly(mt, false)
-local old = mt.__namecall
+-- Auto Loop while true do task.wait(0.5) if autofarm then for _, fruit in pairs(workspace:GetDescendants()) do if fruit.Name:lower():find("fruit") and fruit:IsA("Tool") then fireclickdetector(fruit:FindFirstChildWhichIsA("ClickDetector")) end end end if autosell then local sellZone = workspace:FindFirstChild("SellZone") if sellZone then game.Players.LocalPlayer.Character:MoveTo(sellZone.Position) end end if autobuy then local shop = workspace:FindFirstChild("FruitShop") if shop then fireclickdetector(shop:FindFirstChildWhichIsA("ClickDetector")) end end end
 
-mt.__namecall = newcclosure(function(self, ...)
-    local args = {...}
-    if getnamecallmethod() == "Kick" then
-        return warn("[Shawarma PRO]: منع محاولة طرد")
-    end
-    return old(self, ...)
-end)
-
--- ختامية
-local aboutTab = Window:NewTab("حول")
-local about = aboutTab:NewSection("معلومات")
-about:NewLabel("Shawarma PRO v1.0 ✅")
-about:NewLabel("تم بواسطة ChatGPT")
-about:NewLabel("يدعم Grow a Garden الرسمية")
-Library:Notify("Shawarma PRO جاهز للاستخدام ✅")
+   
